@@ -1,0 +1,18 @@
+[workspace]
+
+resolver = "2"
+members = [
+    "crates/peek_codec_abstract"
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.75"
+license = "MIT OR Apache-2.0"
+authors = ["<your-username>"]
+repository = "https://github.com/ounisika/peekBoard"
+description = "Offline USB-RNDIS headless screen streamer for robot development boards"
+
+[workspace.dependencies]
+thiserror = "2.0.21"
