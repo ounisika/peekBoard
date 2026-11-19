@@ -15,3 +15,6 @@ description = "Offline USB-RNDIS headless screen streamer for robot development 
 
 [workspace.dependencies]
 thiserror = "2.0.21"
+openh264 = "0.6"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }

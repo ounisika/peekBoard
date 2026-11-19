@@ -1,12 +1,52 @@
-   0.013994375s  INFO prepare_target{force=false package_id=peek-codec-abstract v0.1.0 (/Users/ounisaki/work/peekBoard/crates/peek_codec_abstract) target="peek_codec_abstract"}: cargo::core::compiler::fingerprint: stale: changed "/Users/ounisaki/work/peekBoard/crates/peek_codec_abstract/src/lib.rs"
-   0.014010958s  INFO prepare_target{force=false package_id=peek-codec-abstract v0.1.0 (/Users/ounisaki/work/peekBoard/crates/peek_codec_abstract) target="peek_codec_abstract"}: cargo::core::compiler::fingerprint:           (vs) "/Users/ounisaki/work/peekBoard/target/debug/.fingerprint/peek-codec-abstract-66a4193407e4448e/dep-lib-peek_codec_abstract"
-   0.014014958s  INFO prepare_target{force=false package_id=peek-codec-abstract v0.1.0 (/Users/ounisaki/work/peekBoard/crates/peek_codec_abstract) target="peek_codec_abstract"}: cargo::core::compiler::fingerprint:                FileTime { seconds: 1795022289, nanos: 735182778 } < FileTime { seconds: 1795022291, nanos: 876583734 }
-   0.014095708s  INFO prepare_target{force=false package_id=peek-codec-abstract v0.1.0 (/Users/ounisaki/work/peekBoard/crates/peek_codec_abstract) target="peek_codec_abstract"}: cargo::core::compiler::fingerprint: fingerprint dirty for peek-codec-abstract v0.1.0 (/Users/ounisaki/work/peekBoard/crates/peek_codec_abstract)/Check { test: false }/TargetInner { name_inferred: true, ..: lib_target("peek_codec_abstract", ["lib"], "/Users/ounisaki/work/peekBoard/crates/peek_codec_abstract/src/lib.rs", Edition2021) }
-   0.014107458s  INFO prepare_target{force=false package_id=peek-codec-abstract v0.1.0 (/Users/ounisaki/work/peekBoard/crates/peek_codec_abstract) target="peek_codec_abstract"}: cargo::core::compiler::fingerprint:     dirty: FsStatusOutdated(StaleItem(ChangedFile { reference: "/Users/ounisaki/work/peekBoard/target/debug/.fingerprint/peek-codec-abstract-66a4193407e4448e/dep-lib-peek_codec_abstract", reference_mtime: FileTime { seconds: 1795022289, nanos: 735182778 }, stale: "/Users/ounisaki/work/peekBoard/crates/peek_codec_abstract/src/lib.rs", stale_mtime: FileTime { seconds: 1795022291, nanos: 876583734 } }))
-   0.015267500s  INFO prepare_target{force=false package_id=peek-codec-abstract v0.1.0 (/Users/ounisaki/work/peekBoard/crates/peek_codec_abstract) target="peek_codec_abstract"}: cargo::core::compiler::fingerprint: stale: changed "/Users/ounisaki/work/peekBoard/crates/peek_codec_abstract/src/lib.rs"
-   0.015275041s  INFO prepare_target{force=false package_id=peek-codec-abstract v0.1.0 (/Users/ounisaki/work/peekBoard/crates/peek_codec_abstract) target="peek_codec_abstract"}: cargo::core::compiler::fingerprint:           (vs) "/Users/ounisaki/work/peekBoard/target/debug/.fingerprint/peek-codec-abstract-3a69a62939c9731a/dep-test-lib-peek_codec_abstract"
-   0.015277291s  INFO prepare_target{force=false package_id=peek-codec-abstract v0.1.0 (/Users/ounisaki/work/peekBoard/crates/peek_codec_abstract) target="peek_codec_abstract"}: cargo::core::compiler::fingerprint:                FileTime { seconds: 1795022289, nanos: 735173029 } < FileTime { seconds: 1795022291, nanos: 876583734 }
-   0.015337583s  INFO prepare_target{force=false package_id=peek-codec-abstract v0.1.0 (/Users/ounisaki/work/peekBoard/crates/peek_codec_abstract) target="peek_codec_abstract"}: cargo::core::compiler::fingerprint: fingerprint dirty for peek-codec-abstract v0.1.0 (/Users/ounisaki/work/peekBoard/crates/peek_codec_abstract)/Check { test: true }/TargetInner { name_inferred: true, ..: lib_target("peek_codec_abstract", ["lib"], "/Users/ounisaki/work/peekBoard/crates/peek_codec_abstract/src/lib.rs", Edition2021) }
-   0.015344000s  INFO prepare_target{force=false package_id=peek-codec-abstract v0.1.0 (/Users/ounisaki/work/peekBoard/crates/peek_codec_abstract) target="peek_codec_abstract"}: cargo::core::compiler::fingerprint:     dirty: FsStatusOutdated(StaleItem(ChangedFile { reference: "/Users/ounisaki/work/peekBoard/target/debug/.fingerprint/peek-codec-abstract-3a69a62939c9731a/dep-test-lib-peek_codec_abstract", reference_mtime: FileTime { seconds: 1795022289, nanos: 735173029 }, stale: "/Users/ounisaki/work/peekBoard/crates/peek_codec_abstract/src/lib.rs", stale_mtime: FileTime { seconds: 1795022291, nanos: 876583734 } }))
+   0.022290041s  INFO prepare_target{force=false package_id=peek-codec-abstract v0.1.0 (/Users/ounisaki/work/peekBoard/crates/peek_codec_abstract) target="peek_codec_abstract"}: cargo::core::compiler::fingerprint: fingerprint error for peek-codec-abstract v0.1.0 (/Users/ounisaki/work/peekBoard/crates/peek_codec_abstract)/Check { test: false }/TargetInner { name_inferred: true, ..: lib_target("peek_codec_abstract", ["lib"], "/Users/ounisaki/work/peekBoard/crates/peek_codec_abstract/src/lib.rs", Edition2021) }
+   0.022310125s  INFO prepare_target{force=false package_id=peek-codec-abstract v0.1.0 (/Users/ounisaki/work/peekBoard/crates/peek_codec_abstract) target="peek_codec_abstract"}: cargo::core::compiler::fingerprint:     err: failed to read `/Users/ounisaki/work/peekBoard/target/debug/.fingerprint/peek-codec-abstract-2d9b3c80309f4f34/lib-peek_codec_abstract`
+
+Caused by:
+    No such file or directory (os error 2)
+
+Stack backtrace:
+   0: <std::backtrace::Backtrace>::create
+   1: <std::backtrace::Backtrace>::capture
+   2: cargo_util::paths::read_bytes
+   3: cargo_util::paths::read
+   4: cargo::core::compiler::fingerprint::_compare_old_fingerprint
+   5: cargo::core::compiler::fingerprint::prepare_target
+   6: cargo::core::compiler::compile
+   7: <cargo::core::compiler::build_runner::BuildRunner>::compile
+   8: cargo::ops::cargo_compile::compile_with_exec
+   9: cargo::ops::cargo_compile::compile
+  10: cargo::commands::check::exec
+  11: <cargo::cli::Exec>::exec
+  12: cargo::main
+  13: std::sys::backtrace::__rust_begin_short_backtrace::<fn(), ()>
+  14: std::rt::lang_start::<()>::{closure#0}
+  15: std::rt::lang_start_internal
+  16: _main
+   0.028313083s  INFO prepare_target{force=false package_id=peek-codec-abstract v0.1.0 (/Users/ounisaki/work/peekBoard/crates/peek_codec_abstract) target="peek_codec_abstract"}: cargo::core::compiler::fingerprint: fingerprint error for peek-codec-abstract v0.1.0 (/Users/ounisaki/work/peekBoard/crates/peek_codec_abstract)/Check { test: true }/TargetInner { name_inferred: true, ..: lib_target("peek_codec_abstract", ["lib"], "/Users/ounisaki/work/peekBoard/crates/peek_codec_abstract/src/lib.rs", Edition2021) }
+   0.028322083s  INFO prepare_target{force=false package_id=peek-codec-abstract v0.1.0 (/Users/ounisaki/work/peekBoard/crates/peek_codec_abstract) target="peek_codec_abstract"}: cargo::core::compiler::fingerprint:     err: failed to read `/Users/ounisaki/work/peekBoard/target/debug/.fingerprint/peek-codec-abstract-1e8f1ab5e1d2ae33/test-lib-peek_codec_abstract`
+
+Caused by:
+    No such file or directory (os error 2)
+
+Stack backtrace:
+   0: <std::backtrace::Backtrace>::create
+   1: <std::backtrace::Backtrace>::capture
+   2: cargo_util::paths::read_bytes
+   3: cargo_util::paths::read
+   4: cargo::core::compiler::fingerprint::_compare_old_fingerprint
+   5: cargo::core::compiler::fingerprint::prepare_target
+   6: cargo::core::compiler::compile
+   7: <cargo::core::compiler::build_runner::BuildRunner>::compile
+   8: cargo::ops::cargo_compile::compile_with_exec
+   9: cargo::ops::cargo_compile::compile
+  10: cargo::commands::check::exec
+  11: <cargo::cli::Exec>::exec
+  12: cargo::main
+  13: std::sys::backtrace::__rust_begin_short_backtrace::<fn(), ()>
+  14: std::rt::lang_start::<()>::{closure#0}
+  15: std::rt::lang_start_internal
+  16: _main
     Checking peek-codec-abstract v0.1.0 (/Users/ounisaki/work/peekBoard/crates/peek_codec_abstract)
-    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.07s
+error: could not compile `peek-codec-abstract` (lib) due to 1 previous error
+warning: build failed, waiting for other jobs to finish...
+error: could not compile `peek-codec-abstract` (lib test) due to 1 previous error

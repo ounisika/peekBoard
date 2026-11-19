@@ -8,5 +8,11 @@ authors.workspace = true
 repository.workspace = true
 description = "Unified hardware codec abstraction for the Peekboard robot screen streamer"
 
+[features]
+default = ["openh264-backend"]
+openh264-backend = ["dep:openh264"]
+
 [dependencies]
 thiserror.workspace = true
+openh264 = {workspace = true, optional = true }
+tracing.workspace = true

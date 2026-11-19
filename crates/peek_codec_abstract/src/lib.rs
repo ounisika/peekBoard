@@ -4,13 +4,13 @@
 //! hardware encoder backends(Tegra NVENC, Rockchip MPP, Intel oneVPL, ...)
 //! 
 //! Backends depend on this crate and implement [`HwEncoder`];
-//! the upper layers (capture, steamer, viewer) only ever talk to the trait, never to a specific vendor API
+//! the upper layers (capture, streamer, viewer) only ever talk to the trait, never to a specific vendor API
 
 #![deny(missing_debug_implementations)]
 
-use std::result;
-
 use thiserror::Error;
+
+pub mod color;
 
 ///Compressed codec format produced by the encoder.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -22,7 +22,7 @@ pub enum CodecFormat {
     H265,
 }
 
-/// Raw pixel format accpeted by encoder backend.
+/// Raw pixel format accepted by encoder backend.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum PixelFormat {
     /// 8-bit RGBA, one plane
