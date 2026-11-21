@@ -12,6 +12,8 @@ use thiserror::Error;
 
 pub mod color;
 
+pub mod protocol;
+
 ///Compressed codec format produced by the encoder.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum CodecFormat {
