@@ -11,8 +11,10 @@
 use thiserror::Error;
 
 pub mod color;
-
 pub mod protocol;
+
+#[cfg(feature = "openh264-backend")]
+pub mod soft_openh264;
 
 ///Compressed codec format produced by the encoder.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -74,6 +76,27 @@ impl EncodeConfig {
     pub fn new(width: u32, height: u32, framerate: u32, bitrate_bps: u32) -> Self{
         Self { width, height, framerate, bitrate_bps, codec: CodecFormat::H264, gop: framerate.max(1), perset: EncoderPreset::Realtime }
     }
+
+    pub fn vaildates(&self) -> Result<(), CodecError> {
+        if self.width == 0 || self.height == 0 {
+            return Err(CodecError::InvalidConfig("frame width and height must be greater than zero".into(),));
+        }
+
+        //YUV 4:2:0 requries even dismensions (U / V planes are W / 2 * H / 2)
+        if self.width % 2 != 0 || self.height % 2 != 0{
+            return Err(CodecError::InvalidConfig(format!("4:2:0 requires even dimensions, got {}x{}",self.width, self.height)));
+        }
+
+        if self.framerate == 0{
+            return Err(CodecError::InvalidConfig("framerate must greater than zero".into(),));
+        }
+
+        if self.bitrate_bps == 0{
+            return Err(CodecError::InvalidConfig("bitrate_bps must greater than zero".into(),));
+        }
+
+        Ok(())
+    }
 }
 
 /// A single iamge plane
@@ -98,6 +121,93 @@ pub struct Frame {
     pub planes: Vec<Plane>,
     /// Monotonic timestamp in microseconds.
     pub timestamp_us: u64,
+}
+
+impl Frame{
+    // Build an RGBA frame
+    pub fn new_rgba(width: u32, height: u32, data: Vec<u8>, timestamp_us: u64) -> Result<Self, CodecError> {
+        // Checked_mul chain guards against 32-bit overflow /huge input.
+        let expected = (width as usize).checked_mul(height as usize).and_then(|px| px.checked_mul(4)).ok_or(CodecError::OutOfMemory)?;
+        if data.len() < expected {
+            return Err(CodecError::InvalidConfig(format!("RGBA8 buffer too small: expected at least {} bytes, got {}", expected, data.len())));
+        }
+        Ok(Self{width, height, format: PixelFormat::Rgba8, planes: vec![Plane {data, stride: width * 4}], timestamp_us})
+    }
+
+    //Bulid an BGRA frame 
+    pub fn new_bgra(width: u32, height: u32, data: Vec<u8>, timestamp_us: u64) -> Result<Self, CodecError> {
+        // Checked_mul chain guards against 32-bit overflow /huge input.
+        let expected = (width as usize).checked_mul(height as usize).and_then(|px| px.checked_mul(4)).ok_or(CodecError::OutOfMemory)?;
+        if data.len() < expected {
+            return Err(CodecError::InvalidConfig(format!("RGBA8 buffer too small: expected at least {} bytes, got {}", expected, data.len())));
+        }
+        Ok(Self{width, height, format: PixelFormat::Bgra8, planes: vec![Plane {data, stride: width * 4}], timestamp_us})
+    }
+
+    // Build an I420 frame 
+    pub fn new_i420(width: u32, height: u32, y: Vec<u8>, u: Vec<u8>, v: Vec<u8>, timestamp_us: u64) -> Result<Self, CodecError> {
+        if width % 2 != 0 || height % 2 != 0 {
+            return Err(CodecError::InvalidConfig("I420 requires even width and height".into(),));
+        }
+        
+        let y_len = (width as usize) * (height as usize);
+        let uv_len = y_len / 4;
+        if y.len() < y_len || u.len() < uv_len || v.len() < uv_len {
+            return Err(CodecError::InvalidConfig("I420 plane buffer size mismatch".into(),));
+        }
+
+        Ok(Self{width, height, format: PixelFormat::I420, planes: vec![
+            Plane {data: y, stride: width},
+            Plane {data: u, stride: width / 2},
+            Plane {data: v, stride: width / 2},
+        ], timestamp_us})
+    }
+
+    // Normalise to i420 so downstream consumers only handle one format
+    pub fn to_i420(&self) -> Result<Frame, CodecError> {
+        match self.format {
+            PixelFormat::I420 => Ok(self.clone()),
+            PixelFormat::Rgba8 => {
+                let plane = self.planes.first().ok_or_else(|| CodecError::InvalidConfig("missing RGBA plane".into()))?;
+                let (y, u ,v) = color::rgba_to_i420(self.width, self.height, &plane.data, plane.stride)?;
+                Frame::new_i420(self.width, self.height, y, u, v, self.timestamp_us)
+            }
+            PixelFormat::Bgra8 => {
+                let plane = self.planes.first().ok_or_else(|| CodecError::InvalidConfig("missing RGBA plane".into()))?;
+                let (y, u ,v) = color::bgra_to_i420(self.width, self.height, &plane.data, plane.stride)?;
+                Frame::new_i420(self.width, self.height, y, u, v, self.timestamp_us)
+            }
+            PixelFormat::Nv12 => {
+                if self.planes.len() < 2 {
+                    return Err(CodecError::InvalidConfig("NV12 requires 2 planes".into()));
+                }
+                let y_plane = &self.planes[0];
+                let uv_plane = &self.planes[1];
+                let (u, v) = color::nv12_to_i420(self.width, self. height, &uv_plane.data, uv_plane.stride)?;
+                Frame::new_i420(self.width, self.height, y_plane.data.clone(), u, v, self.timestamp_us)
+            }
+        }
+    }
+
+    //Normalise to nv12 for hardware that only accept nv12
+    pub fn to_nv12(&self) -> Result<Frame, CodecError> {
+        match self.format {
+            PixelFormat::Nv12 => Ok(self.clone()),
+            _=> {
+                let i420 = self.to_i420()?;
+                let y = i420.planes[0].data.clone();
+                let uv = color::i420_uv_to_nv12(&i420.planes[1].data, &i420.planes[2].data);
+
+                Ok(Frame{
+                    width: self.width, height: self.height, format: PixelFormat::Nv12, planes: vec![
+                        Plane {data: y, stride: self.width},
+                        Plane {data: uv, stride: self.width},
+                    ], 
+                    timestamp_us: self.timestamp_us,
+                })
+            }
+        }
+    }
 }
 
 /// one encoded network abstraction unit. For H264 / H265 this is an Annex-B
@@ -181,4 +291,40 @@ pub trait EncoderFactory: std::fmt::Debug + Send + Sync {
 
     ///Construct a configured encoder for the given config
     fn create(&self, config: &EncodeConfig) -> Result<Box<dyn HwEncoder>, CodecError>;
+}
+
+/// Backed selection: try in caller's order , fall back on failure
+/// Finally use software encoding (need turn on in feature) or return "BackendUnavailable"
+pub fn crate_best_encoder(factories: &[&dyn EncoderFactory], config: &EncodeConfig,) -> Result<Box<dyn HwEncoder>, CodecError> {
+    config.vaildates()?;
+    for factory in factories {
+
+        // Skip factories whose probe reports unavailable (e.g. no GPU)
+        if factory.available() {
+            match factory.create(config) {
+                Ok(enc) => {
+                    tracing::info!(backend = factory.name(), "Initialized hardware encoder");
+                    return Ok(enc);
+                }
+                Err(err) => {
+                    // A single factory failure is not fatal; keep trying the next one
+                    tracing::warn!(
+                        backend = factory.name(),
+                        error = %err, 
+                        "Hardware encoder failed initialization, trying next backend"
+                    );
+                }
+            }
+        }
+    }
+    // Software fallback: always available when the feature is on (H264 only)
+    #[cfg(feature = "openh264-backend")]
+    {
+        let fallback = soft_openh264::OpenH264Factory;
+        tracing::info!(backend = fallback.name(), "Falling back to OpenH264 software encoder");
+        return  fallback.create(config);
+    }
+     // Feature off and no hardware backend: return a clear environment error.
+    #[cfg(not(feature = "openh264-backend"))]
+    Err(CodecError::BackendUnavailable("no hardware encoder available and openh264-backend feature is disabled".into(),))
 }
