@@ -21,6 +21,10 @@ pub fn rgba_to_i420(width: u32, height: u32, rgba: &[u8], stride: u32) -> Result
     convert_rgbx_to_i420::<false>(width, height, rgba, stride)
 }
 
+pub fn bgra_to_i420(width: u32, height: u32, rgba: &[u8], stride: u32) -> Result<(Vec<u8>, Vec<u8>, Vec<u8>), CodecError> {
+    convert_rgbx_to_i420::<true>(width, height, rgba, stride)
+}
+
 fn convert_rgbx_to_i420<const IS_BGRA: bool>(width: u32, height: u32, src: &[u8], stride: u32) -> Result<(Vec<u8>, Vec<u8>, Vec<u8>), CodecError>{
     //I420 requires non-zero, even width and height
     if width == 0 || height == 0 || width % 2 != 0 || height % 2 != 0 {
