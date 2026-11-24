@@ -1,0 +1,17 @@
+[package]
+name = "peek-capture"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+description = "Screen capture abstraction (X11 and synthetic test source) for peekBoard"
+
+[dependencies]
+peek-codec-abstract = { path = "../peek_codec_abstract" }
+thiserror.workspace = true
+tracing.workspace = true
+
+[target.'cfg(target_os = "linux")'.dependencies]
+x11rb.workspace = true
