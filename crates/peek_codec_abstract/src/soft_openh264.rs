@@ -1,4 +1,6 @@
 use std::collections::VecDeque;
+use std::fmt::format;
+use std::fs::OpenOptions;
 
 use openh264::encoder::{self, Encoder, EncoderConfig, FrameType};
 use openh264::formats::YUVSlices;
@@ -57,4 +59,50 @@ impl Default for OpenH264Encoder {
     fn default() -> Self {
         Self::new()
     }
+}
+
+impl OpenH264Encoder {
+    pub fn new() -> Self{
+        Self {
+            config: None, inner: None, pending_nalus: VecDeque::new(), frame_counter: 0, 
+            // Initially force the next frame to be IDR so decodedrs can start from a clean state
+            force_next_idr: true,
+        }
+    }
+}
+
+// HwEncoder trait implmentation
+impl HwEncoder for OpenH264Encoder {
+    // Configure and initialise the encoder Indempotent; resets state
+    fn configure(&mut self, config: &EncodeConfig) -> Result<(), CodecError> {
+        config.vaildates()?;
+        
+        //Software backend only supports H.264
+        if config.codec != CodecFormat::H264 {
+            return Err(CodecError::InvalidConfig("OpenH264 software fallback only supports CodecFormat::H264".into()));
+        }
+
+    //Load lobopenh264 (dlopen on first use)
+    let api = OpenH264API::from_source();
+
+    // Builder config: bitrate(bps), max frame-rate, skip-frame disabled
+    // enable_skip_frame(false) is crucial: it prevents the encoder from dropping frames to honour bitrate, so every input
+    // frame yields an output - required for real-time streaming latency / completness
+    let enc_cfg = EncoderConfig::new()
+        .set_bitrate_bps(config.bitrate_bps)
+        .max_frame_rate(config.framerate as f32)
+        .enable_skip_frame(false);
+    let encoder = Encoder::with_api_config(api, enc_cfg)
+    .map_err(|e| CodecError::EncoderFailure(format!("OpenH264 init failed: {e}")))?;
+    
+    // Store state and reset counters so `configure` restarts cleanly
+    self.config = Some(config.clone());
+    self.inner = Some(encoder);
+    self.pending_nalus.clear();
+    self.frame_counter = 0;
+    self.force_next_idr = true;
+    Ok(())
+    }
+
+    
 }
