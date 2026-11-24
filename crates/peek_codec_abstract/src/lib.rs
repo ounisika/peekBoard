@@ -276,6 +276,8 @@ pub trait HwEncoder: std::fmt::Debug + Send {
 
     ///Name For user like "rk-mpp, tegra-nevnc"
     fn backend_name(&self) -> &str;
+
+    fn force_keyframe(&mut self) -> Result<(), CodecError>;
 }
 
 /// A factory taht probes for a backend and constructs an encoder on demand
