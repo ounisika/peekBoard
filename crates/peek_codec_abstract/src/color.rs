@@ -77,7 +77,7 @@ fn convert_rgbx_to_i420<const IS_BGRA: bool>(width: u32, height: u32, src: &[u8]
         //4-pixel average: +2 before >>2 implements round-half-up
         let r_avg = (r00 + r01 + r10 + r11 + 2) >> 2;
         let b_avg = (b00 + b01 + b10 + b11 + 2) >> 2;
-        let g_avg = (b00 + b01 + b10 + b11 + 2) >>2;
+        let g_avg = (g00 + g01 + g10 + g11 + 2) >>2;
 
         //Row-major index into the (w/2 x h/2) chroma planes
         let uv_idx = row_pair * (w / 2) + col_pair;
