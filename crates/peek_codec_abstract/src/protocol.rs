@@ -25,9 +25,6 @@ pub fn write_nalu_packet<W: Write>(writer: &mut W, nalu: &Nalu) -> Result<(), Co
 
     let len_bytes = (nalu.data.len() as u32).to_be_bytes();
     writer.write_all(&len_bytes)?;
-
-    //1-byte frame flag
-    writer.write_all(&[nalu.is_keyframe as u8])?;
     writer.write_all(&nalu.data)?;
 
     Ok(())
