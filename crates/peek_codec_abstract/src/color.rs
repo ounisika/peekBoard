@@ -36,25 +36,25 @@ fn convert_rgbx_to_i420<const IS_BGRA: bool>(width: u32, height: u32, src: &[u8]
     // row_stride = max (stride, w * 4); guards against too-small stride
     let row_stride = (stride as usize).max(w * 4);
 
-    // min required = offset of last row + vailid bytes of last row 
+    // min required = offset of last row + valid bytes of last row 
     // (no padding required after the last row)
     let required  = (h - 1) * row_stride + w * 4;
     if src.len() < required {
         return Err(CodecError::InvalidConfig(format!("source buffer too small for {}x{} with stride {}", width, height ,row_stride)));
     }
 
-    // Full-size Y plane; U / V planes are half-size in both dimenisons
+    // Full-size Y plane; U / V planes are half-size in both dimensions
     let mut y_plane = vec![0u8; w * h];
     let mut u_plane = vec![0u8; (w / 2) * (h / 2)];
     let mut v_plane = vec![0u8; (w / 2) * (h / 2)];
 
-    // chroma downsanpling: itrate over 2x2 pixel blocks
-    // For each 2x2 block: write  4 Y samples; compute one U and one V from the averaged RGB values
+    // chroma downsampling: iterate over 2x2 pixel blocks
+    // For each 2x2 block: write 4 Y samples; compute one U and one V from the averaged RGB values
     for row_pair in 0..(h / 2) {
         let y0 = row_pair * 2;
         let y1 = y0 + 1;
 
-        //Only take the first w*4 bytes fo each row; skip trailing padding
+        //Only take the first w*4 bytes of each row; skip trailing padding
         let src_row0 = &src[y0 * row_stride..y0 * row_stride + w * 4];
         let src_row1 = &src[y1 * row_stride..y1 * row_stride + w * 4];
 
@@ -74,7 +74,7 @@ fn convert_rgbx_to_i420<const IS_BGRA: bool>(width: u32, height: u32, src: &[u8]
         y_plane[y1 * w + x0] = rgb_to_y(r10, g10, b10);
         y_plane[y1 * w + x1] = rgb_to_y(r11, g11, b11);
 
-        //4-pixels avarage: +2 before >>2 implements round-half-up
+        //4-pixel average: +2 before >>2 implements round-half-up
         let r_avg = (r00 + r01 + r10 + r11 + 2) >> 2;
         let b_avg = (b00 + b01 + b10 + b11 + 2) >> 2;
         let g_avg = (b00 + b01 + b10 + b11 + 2) >>2;
@@ -153,8 +153,8 @@ pub fn i420_to_rgba(width: u32, height: u32, y_plane: &[u8], y_stride: usize, u_
         let out_row = &mut out_rgba[row * w * 4..(row + 1) * w * 4];
 
         for col in 0..w {
-            // Remove limited-range offests: (Y-16), (U-128), (V-128); 
-            // clamp the luna part to non-negative to avoid negative chroma product
+            // Remove limited-range offsets: (Y-16), (U-128), (V-128); 
+            // clamp the luma part to non-negative to avoid negative chroma product
             let y = (y_row[col] as i32 - 16).max(0);
             let u = u_row[col / 2] as i32 - 128;
             let v = v_row[col / 2] as i32 - 128;

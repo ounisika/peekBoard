@@ -11,12 +11,12 @@ use crate::{CodecError, CodecFormat, EncodeConfig, EncoderFactory, Frame, HwEnco
 #[derive(Debug, Clone, Copy, Default)]
 pub struct OpenH264Factory;
 
-// Factory implementation - crates concrete encoder instances 
+// Factory implementation - creates concrete encoder instances 
 impl EncoderFactory for OpenH264Factory {
     fn name(&self) -> &str { "openh264-soft" }
     fn available(&self) -> bool{ true }
 
-    //new then configure; spilts failure stages: new shouildn`t fail, configure vaildates config and loads the library 
+    //new then configure; splits failure stages: new shouldn't fail, configure validates config and loads the library 
     fn create(&self, config: &EncodeConfig) -> Result<Box<dyn HwEncoder>, CodecError> {
         let mut encoder = OpenH264Encoder::new();
         encoder.configure(config)?;
@@ -24,7 +24,7 @@ impl EncoderFactory for OpenH264Factory {
     }
 }
 
-//Encoder state - Option fields model a "configured/ unconfigured" state machine
+//Encoder state - Option fields model a "configured / unconfigured" state machine
 pub struct OpenH264Encoder {
     // Config: None means "configure" has not been called
     config: Option<EncodeConfig>,
@@ -32,13 +32,13 @@ pub struct OpenH264Encoder {
     // Underlying OpenH264 encoder: None means not initialized yet
     inner: Option<Encoder>,
     
-    // Output queue: NALUS producted by `encode` are buffered here until drained by `poll_nalu`
+    // Output queue: NALUs produced by `encode` are buffered here until drained by `poll_nalu`
     pending_nalus: VecDeque<Nalu>,
 
     // Frame counter: drives periodic keyframe insertion via `frame_counter % gap`
     frame_counter: u64,
 
-    // Once forced IDR flag: the next frame is forced to be an I frame
+    // One-shot forced IDR flag: the next frame is forced to be an I frame
     force_next_idr: bool,
 }
 
@@ -64,29 +64,29 @@ impl OpenH264Encoder {
     pub fn new() -> Self{
         Self {
             config: None, inner: None, pending_nalus: VecDeque::new(), frame_counter: 0, 
-            // Initially force the next frame to be IDR so decodedrs can start from a clean state
+            // Initially force the next frame to be IDR so decoders can start from a clean state
             force_next_idr: true,
         }
     }
 }
 
-// HwEncoder trait implmentation
+// HwEncoder trait implementation
 impl HwEncoder for OpenH264Encoder {
-    // Configure and initialise the encoder Indempotent; resets state
+    // Configure and initialize the encoder. Idempotent; resets state
     fn configure(&mut self, config: &EncodeConfig) -> Result<(), CodecError> {
-        config.vaildates()?;
+        config.validates()?;
         
         //Software backend only supports H.264
         if config.codec != CodecFormat::H264 {
             return Err(CodecError::InvalidConfig("OpenH264 software fallback only supports CodecFormat::H264".into()));
         }
 
-    //Load lobopenh264 (dlopen on first use)
+    //Load libopenh264 (dlopen on first use)
     let api = OpenH264API::from_source();
 
     // Builder config: bitrate(bps), max frame-rate, skip-frame disabled
-    // enable_skip_frame(false) is crucial: it prevents the encoder from dropping frames to honour bitrate, so every input
-    // frame yields an output - required for real-time streaming latency / completness
+    // enable_skip_frame(false) is crucial: it prevents the encoder from dropping frames to honor bitrate, so every input
+    // frame yields an output - required for real-time streaming latency / completeness
     let enc_cfg = EncoderConfig::new()
         .set_bitrate_bps(config.bitrate_bps)
         .max_frame_rate(config.framerate as f32)
@@ -110,7 +110,7 @@ impl HwEncoder for OpenH264Encoder {
         let cfg = self.config.as_ref().ok_or(CodecError::NotInitialized)?;
         let encoder = self.inner.as_mut().ok_or(CodecError::NotInitialized)?;
 
-        //Dimensions must match config; otherwise the encoder's behaviour is undefined
+        //Dimensions must match config; otherwise the encoder's behavior is undefined
         if frame.width != cfg.width || frame.height != cfg.height {
             return Err(CodecError::InvalidConfig(format!(
                 "frame dimensions {}x{} do not match configured {}x{}",
@@ -121,7 +121,7 @@ impl HwEncoder for OpenH264Encoder {
         let i420 = frame.to_i420()?;
 
         // Keyframe scheduling
-        // Froce the currnet frame to IDR when either:
+        // Force the current frame to IDR when either:
         // - one-shot flag set after configure() / force_keyframe()
         // - GOP period reached
         let gop = cfg.gop.max(1) as u64;
@@ -151,7 +151,7 @@ impl HwEncoder for OpenH264Encoder {
             .map_err(|e| CodecError::EncoderFailure(format!("OpenH264 encode failed: {e}")))?;
         
         // Copy out the bytes. An IDR-I frame usually carries SPS/PPS/IDR NAL
-        //units; we treat the whole Annex-B bytes stram as one `Nalu` packet
+        //units; we treat the whole Annex-B byte stream as one `Nalu` packet
         let data = bitstream.to_vec();
 
         // Keyframe detection: primary via encoder frame_type, fallback via 
@@ -177,13 +177,13 @@ impl HwEncoder for OpenH264Encoder {
         }
         let count = self.pending_nalus.len();
 
-        //drain(..). removes everything an O(1) claer (up to capacity)
+        // drain(..) removes everything; an O(1) clear (up to capacity)
         out.extend(self.pending_nalus.drain(..));
 
         Ok(count)
     }
 
-    // Requesr the next fed frame to be a keyframe (effective asynchronously)
+    // Request the next fed frame to be a keyframe (effective asynchronously)
     fn force_keyframe(&mut self) -> Result<(),CodecError> {
         self.force_next_idr = true;
         Ok(())

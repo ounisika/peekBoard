@@ -1,6 +1,6 @@
-//! Unfiled hardware codec abstraction for Peekboard
+//! Unified hardware codec abstraction for Peekboard
 //! 
-//! This crate is platform-agnostic. It defines the traits and data structures that sit between the screen-capture /streaming logic and per vendor
+//! This crate is platform-agnostic. It defines the traits and data structures that sit between the screen-capture / streaming logic and per vendor
 //! hardware encoder backends(Tegra NVENC, Rockchip MPP, Intel oneVPL, ...)
 //! 
 //! Backends depend on this crate and implement [`HwEncoder`];
@@ -66,29 +66,29 @@ pub struct EncodeConfig {
     pub codec: CodecFormat,
     /// Group of picture size in frames (keyframe interval)
     pub gop: u32,
-    /// Quality / lateucy perset
-    pub perset: EncoderPreset,
+    /// Quality / latency preset
+    pub preset: EncoderPreset,
 }
 
 impl EncodeConfig {
-    ///Create a config with senible defaults: H.264, realtime perset,
+    ///Create a config with sensible defaults: H.264, realtime preset,
     /// one keyframe per second 
     pub fn new(width: u32, height: u32, framerate: u32, bitrate_bps: u32) -> Self{
-        Self { width, height, framerate, bitrate_bps, codec: CodecFormat::H264, gop: framerate.max(1), perset: EncoderPreset::Realtime }
+        Self { width, height, framerate, bitrate_bps, codec: CodecFormat::H264, gop: framerate.max(1), preset: EncoderPreset::Realtime }
     }
 
-    pub fn vaildates(&self) -> Result<(), CodecError> {
+    pub fn validates(&self) -> Result<(), CodecError> {
         if self.width == 0 || self.height == 0 {
             return Err(CodecError::InvalidConfig("frame width and height must be greater than zero".into(),));
         }
 
-        //YUV 4:2:0 requries even dismensions (U / V planes are W / 2 * H / 2)
+        //YUV 4:2:0 requires even dimensions (U / V planes are W / 2 * H / 2)
         if self.width % 2 != 0 || self.height % 2 != 0{
             return Err(CodecError::InvalidConfig(format!("4:2:0 requires even dimensions, got {}x{}",self.width, self.height)));
         }
 
         if self.framerate == 0{
-            return Err(CodecError::InvalidConfig("framerate must greater than zero".into(),));
+            return Err(CodecError::InvalidConfig("framerate must be greater than zero".into(),));
         }
 
         if self.bitrate_bps == 0{
@@ -99,12 +99,12 @@ impl EncodeConfig {
     }
 }
 
-/// A single iamge plane
+/// A single image plane
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Plane{
     /// Plane pixel bytes (owned)
     pub data: Vec<u8>,
-    /// Bytes per pixels row (maybe be padded / aligned by the producer)
+    /// Bytes per pixel row (may be padded / aligned by the producer)
     pub stride: u32,
 }
 
@@ -126,7 +126,7 @@ pub struct Frame {
 impl Frame{
     // Build an RGBA frame
     pub fn new_rgba(width: u32, height: u32, data: Vec<u8>, timestamp_us: u64) -> Result<Self, CodecError> {
-        // Checked_mul chain guards against 32-bit overflow /huge input.
+        // checked_mul chain guards against 32-bit overflow / huge input.
         let expected = (width as usize).checked_mul(height as usize).and_then(|px| px.checked_mul(4)).ok_or(CodecError::OutOfMemory)?;
         if data.len() < expected {
             return Err(CodecError::InvalidConfig(format!("RGBA8 buffer too small: expected at least {} bytes, got {}", expected, data.len())));
@@ -134,9 +134,9 @@ impl Frame{
         Ok(Self{width, height, format: PixelFormat::Rgba8, planes: vec![Plane {data, stride: width * 4}], timestamp_us})
     }
 
-    //Bulid an BGRA frame 
+    // Build a BGRA frame 
     pub fn new_bgra(width: u32, height: u32, data: Vec<u8>, timestamp_us: u64) -> Result<Self, CodecError> {
-        // Checked_mul chain guards against 32-bit overflow /huge input.
+        // checked_mul chain guards against 32-bit overflow / huge input.
         let expected = (width as usize).checked_mul(height as usize).and_then(|px| px.checked_mul(4)).ok_or(CodecError::OutOfMemory)?;
         if data.len() < expected {
             return Err(CodecError::InvalidConfig(format!("RGBA8 buffer too small: expected at least {} bytes, got {}", expected, data.len())));
@@ -163,7 +163,7 @@ impl Frame{
         ], timestamp_us})
     }
 
-    // Normalise to i420 so downstream consumers only handle one format
+    // Normalize to I420 so downstream consumers only handle one format
     pub fn to_i420(&self) -> Result<Frame, CodecError> {
         match self.format {
             PixelFormat::I420 => Ok(self.clone()),
@@ -189,7 +189,7 @@ impl Frame{
         }
     }
 
-    //Normalise to nv12 for hardware that only accept nv12
+    //Normalize to NV12 for hardware that only accepts NV12
     pub fn to_nv12(&self) -> Result<Frame, CodecError> {
         match self.format {
             PixelFormat::Nv12 => Ok(self.clone()),
@@ -216,9 +216,9 @@ impl Frame{
 pub struct Nalu {
     /// NALU bytes including Annex-B start code
     pub data: Vec<u8>,
-    /// Timestamp in mricoseconds, matching the source frame
+    /// Timestamp in microseconds, matching the source frame
     pub timestamp_us: u64,
-    /// Wether this NALU belongs to keyframe
+    /// Whether this NALU belongs to a keyframe
     pub is_keyframe: bool,
 }
 
@@ -235,13 +235,13 @@ pub enum CodecError {
 
     /// The pixel format is not supported by this backend
     #[error("unsupported pixel format: {0:?}")]
-    UnsupportedFromat(PixelFormat),
+    UnsupportedFormat(PixelFormat),
 
-    /// The hardware backend is not preset or not usable on this machine
+    /// The hardware backend is not present or not usable on this machine
     #[error("hardware backend unavailable: {0}")]
     BackendUnavailable(String),
 
-    ///Geneic encoder-side failure (ioctl, driver, queue, ...)
+    ///Generic encoder-side failure (ioctl, driver, queue, ...)
     #[error("encoder failure: {0}")]
     EncoderFailure(String),
     
@@ -261,10 +261,10 @@ pub enum CodecError {
 /// Repeatedly [`HwEncoder::send_frame`] followed by [`HwEncoder::poll_nalu`].
 /// [`HwEncoder::flush`] at the end to drain buffered frames.
 pub trait HwEncoder: std::fmt::Debug + Send {
-    ///Apply (or negoiate) the encoder congfiguaration
+    ///Apply (or negotiate) the encoder configuration
     fn configure(&mut self, config: &EncodeConfig) -> Result<(), CodecError>;
 
-    /// Feed one raw frame for encoder
+    /// Feed one raw frame to the encoder
     fn feed_frame(&mut self, frame:Frame) -> Result<(), CodecError>;
 
     ///Drain encoded NALUs produced since the last call
@@ -274,16 +274,16 @@ pub trait HwEncoder: std::fmt::Debug + Send {
     ///Signal end of input and flush any remaining buffered frames
     fn flush(&mut self) -> Result<(), CodecError>;
 
-    ///Name For user like "rk-mpp, tegra-nevnc"
+    ///Name for the user, like "rk-mpp, tegra-nvenc"
     fn backend_name(&self) -> &str;
 
     fn force_keyframe(&mut self) -> Result<(), CodecError>;
 }
 
-/// A factory taht probes for a backend and constructs an encoder on demand
+/// A factory that probes for a backend and constructs an encoder on demand
 /// 
-/// Used by the steamer to detect availbale hardware at runtime and fail back to anthoer backend (including software encoder)
-/// when the preferrd is unavailable
+/// Used by the streamer to detect available hardware at runtime and fall back to another backend (including software encoder)
+/// when the preferred one is unavailable
 pub trait EncoderFactory: std::fmt::Debug + Send + Sync {
     /// Backend name, matching [`HwEncoder::backend_name`].
     fn name(&self) -> &str;
@@ -295,10 +295,10 @@ pub trait EncoderFactory: std::fmt::Debug + Send + Sync {
     fn create(&self, config: &EncodeConfig) -> Result<Box<dyn HwEncoder>, CodecError>;
 }
 
-/// Backed selection: try in caller's order , fall back on failure
+/// Backend selection: try in caller's order, fall back on failure
 /// Finally use software encoding (need turn on in feature) or return "BackendUnavailable"
-pub fn crate_best_encoder(factories: &[&dyn EncoderFactory], config: &EncodeConfig,) -> Result<Box<dyn HwEncoder>, CodecError> {
-    config.vaildates()?;
+pub fn create_best_encoder(factories: &[&dyn EncoderFactory], config: &EncodeConfig,) -> Result<Box<dyn HwEncoder>, CodecError> {
+    config.validates()?;
     for factory in factories {
 
         // Skip factories whose probe reports unavailable (e.g. no GPU)
