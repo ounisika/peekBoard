@@ -162,7 +162,7 @@ pub fn i420_to_rgba(width: u32, height: u32, y_plane: &[u8], y_stride: usize, u_
             //Fixed-point inverse: >> 8 means divide by 256
             let c = 298 * y;
             let r = ((c + 409 * v + 128) >> 8).clamp(0, 255) as u8;
-            let g = ((c - 100 * u - 208 * v * 128) >> 8).clamp(0, 255) as u8;
+            let g = ((c - 100 * u - 208 * v ) >> 8).clamp(0, 255) as u8;
             let b = ((c + 516 * u + 128) >> 8).clamp(0, 255) as u8;
 
             //Write out RGBA with an opaque alpha channel
